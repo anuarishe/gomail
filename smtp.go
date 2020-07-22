@@ -8,6 +8,7 @@ import (
 	"net/smtp"
 	"strings"
 	"time"
+	"golang.org/x/net/proxy"
 )
 
 // A Dialer is a dialer to an SMTP server.
@@ -33,6 +34,16 @@ type Dialer struct {
 	// LocalName is the hostname sent to the SMTP server with the HELO command.
 	// By default, "localhost" is sent.
 	LocalName string
+
+	Proxy Proxy
+}
+
+type Proxy struct {
+	Address string
+
+	Username string
+
+	Password string
 }
 
 // NewDialer returns a new SMTP Dialer. The given parameters are used to connect
@@ -47,6 +58,12 @@ func NewDialer(host string, port int, username, password string) *Dialer {
 	}
 }
 
+func NewDialerWithProxy(host string, port int, username, password string, proxy Proxy) *Dialer {
+	dialer := NewDialer(host, port, username, password)
+	dialer.Proxy = proxy
+	return dialer
+}
+
 // NewPlainDialer returns a new SMTP Dialer. The given parameters are used to
 // connect to the SMTP server.
 //
@@ -58,7 +75,28 @@ func NewPlainDialer(host string, port int, username, password string) *Dialer {
 // Dial dials and authenticates to an SMTP server. The returned SendCloser
 // should be closed when done using it.
 func (d *Dialer) Dial() (SendCloser, error) {
-	conn, err := netDialTimeout("tcp", addr(d.Host, d.Port), 10*time.Second)
+	var auth *proxy.Auth
+	var conn net.Conn
+	var err error
+
+	if d.Proxy.Username != "" {
+		auth = &proxy.Auth{
+			User:     d.Proxy.Username,
+			Password: d.Proxy.Password,
+		}
+	}
+
+	if d.Proxy.Address != "" {
+		dialer, err := proxy.SOCKS5("tcp", d.Proxy.Address, auth, &net.Dialer{ Timeout: 10 * time.Second })
+		if err != nil {
+			return nil, err
+		}
+
+		conn, err = dialer.Dial("tcp", addr(d.Host, d.Port))
+	} else {
+		conn, err = netDialTimeout("tcp", addr(d.Host, d.Port), 10 * time.Second)
+	}
+
 	if err != nil {
 		return nil, err
 	}
