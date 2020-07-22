@@ -285,27 +285,27 @@ func SetCopyFunc(f func(io.Writer) error) FileSetting {
 
 // AttachReader attaches a file using an io.Reader
 func (m *Message) AttachReader(name string, r io.Reader, settings ...FileSetting) {
-	m.attachments = m.appendFile(m.attachments, fileFromReader(name, r), settings)
+	m.attachments = m.appendFile(m.attachments, m.fileFromReader(name, r), settings)
 }
 
 // Attach attaches the files to the email.
 func (m *Message) Attach(filename string, settings ...FileSetting) {
-	m.attachments = m.appendFile(m.attachments, fileFromFilename(filename), settings)
+	m.attachments = m.appendFile(m.attachments, m.fileFromFilename(filename), settings)
 }
 
 // EmbedReader embeds the images to the email.
 func (m *Message) EmbedReader(name string, r io.Reader, settings ...FileSetting) {
-	m.embedded = m.appendFile(m.embedded, fileFromReader(name, r), settings)
+	m.embedded = m.appendFile(m.embedded, m.fileFromReader(name, r), settings)
 }
 
 // Embed embeds the images to the email.
 func (m *Message) Embed(filename string, settings ...FileSetting) {
-	m.embedded = m.appendFile(m.embedded, fileFromFilename(filename), settings)
+	m.embedded = m.appendFile(m.embedded, m.fileFromFilename(filename), settings)
 }
 
-func fileFromFilename(name string) *file {
+func (m *Message) fileFromFilename(name string) *file {
 	return &file{
-		Name:   filepath.Base(name),
+		Name:   m.encodeString(filepath.Base(name)),
 		Header: make(map[string][]string),
 		CopyFunc: func(w io.Writer) error {
 			h, err := os.Open(name)
@@ -321,9 +321,9 @@ func fileFromFilename(name string) *file {
 	}
 }
 
-func fileFromReader(name string, r io.Reader) *file {
+func (m *Message) fileFromReader(name string, r io.Reader) *file {
 	return &file{
-		Name:   filepath.Base(name),
+		Name:   m.encodeString(filepath.Base(name)),
 		Header: make(map[string][]string),
 		CopyFunc: func(w io.Writer) error {
 			if _, err := io.Copy(w, r); err != nil {
