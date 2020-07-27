@@ -78,6 +78,7 @@ func (d *Dialer) Dial() (SendCloser, error) {
 	var auth *proxy.Auth
 	var conn net.Conn
 	var err error
+	var dialer proxy.Dialer
 
 	if d.Proxy.Username != "" {
 		auth = &proxy.Auth{
@@ -87,7 +88,7 @@ func (d *Dialer) Dial() (SendCloser, error) {
 	}
 
 	if d.Proxy.Address != "" {
-		dialer, err := proxy.SOCKS5("tcp", d.Proxy.Address, auth, &net.Dialer{ Timeout: 10 * time.Second })
+		dialer, err = proxy.SOCKS5("tcp", d.Proxy.Address, auth, &net.Dialer{ Timeout: 10 * time.Second })
 		if err != nil {
 			return nil, err
 		}
