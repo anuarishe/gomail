@@ -63,6 +63,25 @@ func TestMessage(t *testing.T) {
 	testMessage(t, m, 0, want)
 }
 
+func TestRemoveHeader(t *testing.T) {
+	m := NewMessage(SetCharset("ISO-8859-1"), SetEncoding(Base64))
+	m.SetHeaders(map[string][]string{
+		"From":    {"from@example.com"},
+		"To":      {"to@example.com"},
+		"Bcc":      {"me@example.com"},
+	})
+
+	m.RemoveHeader("To")
+
+	want := &message{
+		from: "from@example.com",
+		to: []string{"me@example.com"},
+		content: "From: from@example.com\r\n",
+	}
+
+	testMessage(t, m, 0, want)
+}
+
 func TestCustomMessage(t *testing.T) {
 	m := NewMessage(SetCharset("ISO-8859-1"), SetEncoding(Base64))
 	m.SetHeaders(map[string][]string{

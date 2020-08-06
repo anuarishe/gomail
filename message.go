@@ -182,6 +182,12 @@ func (m *Message) GetHeader(field string) []string {
 	return m.header[field]
 }
 
+func (m *Message) RemoveHeader(field string) {
+	if _, ok := m.header[field]; ok {
+		delete(m.header, field)
+	}
+}
+
 // SetBody sets the body of the message. It replaces any content previously set
 // by SetBody, AddAlternative or AddAlternativeWriter.
 func (m *Message) SetBody(contentType, body string, settings ...PartSetting) {
