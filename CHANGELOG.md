@@ -18,4 +18,4 @@ different email to each Bcc address.
 authentication mechanism when needed.
 - Go 1.2 is now required instead of Go 1.3. No external dependency are used when
 using Go 1.5.
-- Added http proxy support 
+- Added http proxy support
