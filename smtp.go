@@ -3,12 +3,13 @@ package gomail
 import (
 	"crypto/tls"
 	"fmt"
+	"golang.org/x/net/proxy"
 	"io"
 	"net"
 	"net/smtp"
+	"net/url"
 	"strings"
 	"time"
-	"golang.org/x/net/proxy"
 )
 
 // A Dialer is a dialer to an SMTP server.
@@ -34,8 +35,7 @@ type Dialer struct {
 	// LocalName is the hostname sent to the SMTP server with the HELO command.
 	// By default, "localhost" is sent.
 	LocalName string
-
-	Proxy Proxy
+	Proxy     Proxy
 }
 
 type Proxy struct {
@@ -44,6 +44,17 @@ type Proxy struct {
 	Username string
 
 	Password string
+
+	Type string
+}
+
+type direct struct{}
+
+// Direct is a direct proxy: one that makes network connections directly.
+var Direct = direct{}
+
+func (direct) Dial(network, addr string) (net.Conn, error) {
+	return net.Dial(network, addr)
 }
 
 // NewDialer returns a new SMTP Dialer. The given parameters are used to connect
@@ -88,14 +99,24 @@ func (d *Dialer) Dial() (SendCloser, error) {
 	}
 
 	if d.Proxy.Address != "" {
-		dialer, err = proxy.SOCKS5("tcp", d.Proxy.Address, auth, &net.Dialer{ Timeout: 10 * time.Second })
-		if err != nil {
-			return nil, err
-		}
+		if d.Proxy.Type == "HTTP" {
+			httpProxyURI, _ := url.Parse(d.Proxy.Address)
+			dialer, err = proxy.FromURL(httpProxyURI, Direct)
+			if err != nil {
+				return nil, err
+			}
 
-		conn, err = dialer.Dial("tcp", addr(d.Host, d.Port))
+			conn, err = dialer.Dial("tcp", addr(d.Host, d.Port))
+		} else {
+			dialer, err = proxy.SOCKS5("tcp", d.Proxy.Address, auth, &net.Dialer{Timeout: 10 * time.Second})
+			if err != nil {
+				return nil, err
+			}
+
+			conn, err = dialer.Dial("tcp", addr(d.Host, d.Port))
+		}
 	} else {
-		conn, err = netDialTimeout("tcp", addr(d.Host, d.Port), 10 * time.Second)
+		conn, err = netDialTimeout("tcp", addr(d.Host, d.Port), 10*time.Second)
 	}
 
 	if err != nil {
