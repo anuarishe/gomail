@@ -50,6 +50,32 @@ type Proxy struct {
 
 type direct struct{}
 
+func init() {
+	proxy.RegisterDialerType("http", newHTTPProxy)
+}
+
+func newHTTPProxy(uri *url.URL, forward proxy.Dialer) (proxy.Dialer, error) {
+	s := new(httpProxy)
+	s.host = uri.Host
+	s.forward = forward
+	if uri.User != nil {
+		s.haveAuth = true
+		s.username = uri.User.Username()
+		s.password, _ = uri.User.Password()
+	}
+
+	return s, nil
+}
+
+// httpProxy is a HTTP/HTTPS connect proxy.
+type httpProxy struct {
+	host     string
+	haveAuth bool
+	username string
+	password string
+	forward  proxy.Dialer
+}
+
 // Direct is a direct proxy: one that makes network connections directly.
 var Direct = direct{}
 
